@@ -1,18 +1,19 @@
-# themis-checker
-A ruby gem for creating service checkers for [themis-finals](https://github.com/aspyatkin/themis-finals) contest checking system.
+# themis-checker-server
+A ruby gem for creating service checker for [themis-finals](https://github.com/aspyatkin/themis-finals) contest checking system.
 
 ## Installation
 ```sh
-gem install themis-checker
+gem install themis-checker-server
 ```
-or just add `gem 'themis-checker'` to your Gemfile and run `bundle`.
+or just add `gem 'themis-checker-server'` to your Gemfile and run `bundle`.
 
 ## Example
 A service checker subclasses `Themis::Checker::Server` and overrides two methods.
 
 Here's the example:
 ```ruby
-require 'themis/checker'
+require 'themis/checker/server'
+require 'themis/checker/result'
 
 class SampleChecker < Themis::Checker::Server
     def push(endpoint, flag_id, flag)
@@ -31,13 +32,7 @@ checker.run
 ```
 
 ### Operation status
-| Status | Description |
-|--------|-------------|
-|`Themis::Checker::Result::UP`| Service is up and operating as expected.|
-|`Themis::Checker::Result::CORRUPT`|Service returns unexpected flag but does not violate the protocol. Only for `pull`.|
-|`Themis::Checker::Result::MUMBLE`|Service is violating the protocol.|
-|`Themis::Checker::Result::DOWN`|Cannot establish connection to service.|
-|`Themis::Checker::Result::INTERNAL_ERROR`|Unexpected situation while running service checker|
+See [themis-checker-result](https://github.com/aspyatkin/themis-checker-result).
 
 ## Configuration
 To run service checker, a bunch of environment variables should be specified:

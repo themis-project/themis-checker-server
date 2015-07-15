@@ -1,6 +1,7 @@
 require 'logger'
 require 'json'
 require 'beaneater'
+require 'themis/checker/result'
 
 
 module Themis
