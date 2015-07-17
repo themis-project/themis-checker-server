@@ -72,3 +72,6 @@ God.watch do |w|
     w.keepalive
 end
 ```
+
+## License
+MIT @ [Alexander Pyatkin](https://github.com/aspyatkin)
