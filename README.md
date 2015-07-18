@@ -1,5 +1,5 @@
 # themis-checker-server
-A ruby gem for creating service checker for [themis-finals](https://github.com/aspyatkin/themis-finals) contest checking system.
+A Ruby gem for creating service checker for [Themis Finals](https://github.com/aspyatkin/themis-finals) contest checking system.
 
 ## Installation
 ```sh
