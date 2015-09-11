@@ -1,5 +1,5 @@
 # themis-checker-server
-A Ruby gem for creating service checker for [Themis Finals](https://github.com/aspyatkin/themis-finals) contest checking system.
+A Ruby gem for creating service checker for [Themis Finals](https://github.com/aspyatkin/themis-finals), CTF contest checking system.
 
 ## Installation
 ```sh
@@ -72,6 +72,16 @@ God.watch do |w|
     w.keepalive
 end
 ```
+
+## See also
+- [themis-finals](https://github.com/aspyatkin/themis-finals)
+- [themis-finals-guidelines](https://github.com/aspyatkin/themis-finals-guidelines)
+- [themis-finals-infrastructure](https://github.com/aspyatkin/themis-finals-infrastructure)
+- [themis-attack-protocol](https://github.com/aspyatkin/themis-attack-protocol)
+- [themis-attack-py](https://github.com/aspyatkin/themis-attack-py)
+- [themis-attack-result](https://github.com/aspyatkin/themis-attack-result)
+- [themis-checker-py](https://github.com/aspyatkin/themis-checker-py)
+- [themis-checker-result](https://github.com/aspyatkin/themis-checker-result)
 
 ## License
 MIT @ [Alexander Pyatkin](https://github.com/aspyatkin)
