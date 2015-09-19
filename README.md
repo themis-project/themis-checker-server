@@ -1,4 +1,8 @@
 # themis-checker-server
+[![Latest Version](https://img.shields.io/gem/v/themis-checker-server.svg?style=flat-square)](https://rubygems.org/gems/themis-checker-server)
+[![License](https://img.shields.io/github/license/aspyatkin/themis-checker-server.svg?style=flat-square)](https://github.com/aspyatkin/themis-checker-server/blob/master/LICENSE)
+[![Dependencies status](https://img.shields.io/gemnasium/aspyatkin/themis-checker-server.svg?style=flat-square)](https://gemnasium.com/aspyatkin/themis-checker-server)
+[![Code Climate](https://img.shields.io/codeclimate/github/aspyatkin/themis-checker-server.svg?style=flat-square)](https://codeclimate.com/github/aspyatkin/themis-checker-server)  
 A Ruby gem for creating service checker for [Themis Finals](https://github.com/aspyatkin/themis-finals), CTF contest checking system.
 
 ## Installation
