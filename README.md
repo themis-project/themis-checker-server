@@ -20,12 +20,12 @@ require 'themis/checker/server'
 require 'themis/checker/result'
 
 class SampleChecker < Themis::Checker::Server
-    def push(endpoint, flag_id, flag)
+    def push(endpoint, flag, adjunct, metadata)
         # business logic...
-        return Themis::Checker::Result::UP, new_flag_id
+        return Themis::Checker::Result::UP, adjunct
     end
 
-    def pull(endpoint, flag_id, flag)
+    def pull(endpoint, flag, adjunct, metadata)
         # business logic...
         Themis::Checker::Result::UP
     end

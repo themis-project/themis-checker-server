@@ -2,6 +2,9 @@ require 'logger'
 require 'json'
 require 'beaneater'
 require 'themis/checker/result'
+require 'base64'
+require 'date'
+require 'time_difference'
 
 
 module Themis
@@ -22,27 +25,50 @@ module Themis
 
                     case job_data['operation']
                     when 'push'
-                        status, flag_id = self.internal_push(
+                        metadata = job_data['metadata']
+                        timestamp_created = DateTime.iso8601 metadata['timestamp']
+                        timestamp_delivered = DateTime.now
+
+                        status, updated_adjunct = self.internal_push(
                             job_data['endpoint'],
-                            job_data['flag_id'],
-                            job_data['flag']
+                            job_data['flag'],
+                            Base64.decode64(job_data['adjunct']),
+                            metadata
                         )
+
+                        timestamp_processed = DateTime.now
 
                         job_result = {
                             operation: job_data['operation'],
                             status: status,
                             flag: job_data['flag'],
-                            flag_id: flag_id,
-                            endpoint: job_data['endpoint']
+                            adjunct: Base64.encode64(updated_adjunct)
                         }
 
-                        @logger.info "PUSH flag #{job_data['flag']} to #{job_data['endpoint']}: result #{status}, flag_id #{flag_id}"
+                        @logger.info('PUSH flag `%s` /%d to `%s`@`%s` (%s) — status %s, adjunct `%s` [delivery %.2fs, processing %.2fs]' % [
+                            job_data['flag'],
+                            metadata['round'],
+                            metadata['service_name'],
+                            metadata['team_name'],
+                            job_data['endpoint'],
+                            Themis::Checker::Result.key(status),
+                            job_result[:adjunct],
+                            TimeDifference.between(timestamp_created, timestamp_delivered).in_seconds,
+                            TimeDifference.between(timestamp_delivered, timestamp_processed).in_seconds
+                        ])
                     when 'pull'
+                        metadata = job_data['metadata']
+                        timestamp_created = DateTime.iso8601 metadata['timestamp']
+                        timestamp_delivered = DateTime.now
+
                         status = self.internal_pull(
                             job_data['endpoint'],
-                            job_data['flag_id'],
-                            job_data['flag']
+                            job_data['flag'],
+                            Base64.decode64(job_data['adjunct']),
+                            job_data['metadata']
                         )
+
+                        timestamp_processed = DateTime.now
 
                         job_result = {
                             operation: job_data['operation'],
@@ -50,7 +76,17 @@ module Themis
                             status: status
                         }
 
-                        @logger.info "PULL flag #{job_data['flag']} from #{job_data['endpoint']} with flag_id #{job_data['flag_id']}: result #{status}"
+                        @logger.info('PULL flag `%s` /%d from `%s`@`%s` (%s) with adjunct `%s` — status %s [delivery %.2fs, processing %.2fs]' % [
+                            job_data['flag'],
+                            metadata['round'],
+                            metadata['service_name'],
+                            metadata['team_name'],
+                            job_data['endpoint'],
+                            job_data['adjunct'],
+                            Themis::Checker::Result.key(status),
+                            TimeDifference.between(timestamp_created, timestamp_delivered).in_seconds,
+                            TimeDifference.between(timestamp_delivered, timestamp_processed).in_seconds
+                        ])
                     else
                         @logger.warn 'Unknown job!'
                     end
@@ -70,11 +106,11 @@ module Themis
                 @logger.info 'Disconnected from beanstalk server'
             end
 
-            def push(endpoint, flag_id, flag)
+            def push(endpoint, flag, adjunct, metadata)
                 raise NotImplementedError, 'Push flag logic not implemented!'
             end
 
-            def pull(endpoint, flag_id, flag)
+            def pull(endpoint, flag, adjunct, metadata)
                 raise NotImplementedError, 'Pull flag logic not implemented!'
             end
 
@@ -110,10 +146,10 @@ module Themis
                 logger
             end
 
-            def internal_push(endpoint, flag_id, flag)
-                result, new_flag_id = Themis::Checker::Result::INTERNAL_ERROR, flag_id
+            def internal_push(endpoint, flag, adjunct, metadata)
+                result, updated_adjunct = Themis::Checker::Result::INTERNAL_ERROR, adjunct
                 begin
-                    result, new_flag_id = self.push endpoint, flag_id, flag
+                    result, updated_adjunct = self.push endpoint, flag, adjunct, metadata
                 rescue Interrupt
                     raise
                 rescue Exception => e
@@ -121,13 +157,13 @@ module Themis
                     e.backtrace.each { |line| @logger.error line }
                 end
 
-                return result, new_flag_id
+                return result, updated_adjunct
             end
 
-            def internal_pull(endpoint, flag_id, flag)
+            def internal_pull(endpoint, flag, adjunct, metadata)
                 result = Themis::Checker::Result::INTERNAL_ERROR
                 begin
-                    result = self.pull endpoint, flag_id, flag
+                    result = self.pull endpoint, flag, adjunct, metadata
                 rescue Interrupt
                     raise
                 rescue Exception => e
