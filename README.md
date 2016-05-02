@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/github/license/aspyatkin/themis-checker-server.svg?style=flat-square)](https://github.com/aspyatkin/themis-checker-server/blob/master/LICENSE)
 [![Dependencies status](https://img.shields.io/gemnasium/aspyatkin/themis-checker-server.svg?style=flat-square)](https://gemnasium.com/aspyatkin/themis-checker-server)
 [![Code Climate](https://img.shields.io/codeclimate/github/aspyatkin/themis-checker-server.svg?style=flat-square)](https://codeclimate.com/github/aspyatkin/themis-checker-server)  
-A Ruby gem for creating service checker for [Themis Finals](https://github.com/aspyatkin/themis-finals), CTF contest checking system.
+A Ruby gem to create service checker for [Themis Finals](https://github.com/aspyatkin/themis-finals) attack-defence CTF checking system.
 
 ## Installation
 ```sh
@@ -12,9 +12,10 @@ gem install themis-checker-server
 or just add `gem 'themis-checker-server'` to your Gemfile and run `bundle`.
 
 ## Example
-A service checker subclasses `Themis::Checker::Server` and overrides two methods.
+A service checker should subclass `Themis::Checker::Server` and override two methods.
 
-Here's the example:
+Here's an example:
+
 ```ruby
 require 'themis/checker/server'
 require 'themis/checker/result'
@@ -39,13 +40,13 @@ checker.run
 See [themis-checker-result](https://github.com/aspyatkin/themis-checker-result).
 
 ## Configuration
-To run service checker, a bunch of environment variables should be specified:
+Several environment variables should be specified to run service checker process:
 ### `BEANSTALKD_URI`
 A connection string for Beanstalk server.
 ### `TUBE_LISTEN`
-A tube to listen for commands from the central server.
+A Beanstalk tube to listen to commands from `Themis Finals` server.
 ### `TUBE_REPORT`
-A tube to report operation results to the central server.
+A Beanstalk tube to report operation results to `Themis Finals` server.
 ### `LOG_LEVEL`
 An optional service checker log level. One of `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` or `UNKNOWN`. Default is `INFO`.
 ### `STDOUT_SYNC`
@@ -53,39 +54,68 @@ An optional parameter controlling `$stdout.sync`.
 
 ## Tips
 ### Logging
-There is a class member `logger`. You can use it in overriden methods `push` and `pull` as `@logger`.
+There is a class member `logger`. You can use it in overriden `push` and `pull` methods as `@logger`.
 ### Stopping service checker
-Service checker stops on `INT` signal.
+Service checker process stops on `INT` signal.
 ### Configuration for [God](https://github.com/mojombo/god) process manager
 ```ruby
-God.watch do |w|
-    w.name = 'sample'
-    w.dir = '/path/to/checker'
-    w.uid = 'nobody'
-    w.gid = 'nogroup'
-    w.log = '/path/to/checker/logs/checker.log'
-    w.start = 'bundle exec ruby checker.rb'
-    w.env = {
-        'BEANSTALKD_URI' => '127.0.0.1:11300',
-        'LOG_LEVEL' => 'INFO',
-        'STDOUT_SYNC' => 'true',
-        'TUBE_LISTEN' => 'volgactf.service.sample.listen',
-        'TUBE_REPORT' => 'volgactf.service.sample.report'
-    }
-    w.stop_signal = 'INT'
-    w.keepalive
+(0...2).to_a.each do |num|
+    God.watch do |w|
+        w.group = 'SERVICE_ALIAS'
+        w.name = "SERVICE_ALIAS-#{num}"
+        w.dir = '/path/to/checker'
+        w.uid = 'nobody'
+        w.gid = 'nogroup'
+        w.log = "/path/to/checker/logs/checker-#{num}.log"
+        w.start = 'bundle exec ruby checker.rb'
+        w.env = {
+            'BEANSTALKD_URI' => '127.0.0.1:11300',
+            'LOG_LEVEL' => 'INFO',
+            'STDOUT_SYNC' => 'true',
+            'TUBE_LISTEN' => 'themis.finals.service.SERVICE_ALIAS.listen',
+            'TUBE_REPORT' => 'themis.finals.service.SERVICE_ALIAS.report'
+        }
+        w.stop_signal = 'INT'
+        w.keepalive
+    end
 end
 ```
+### Configuration for [Supervisor](http://supervisord.org) process manager
+```
+[program:themis.finals.service.SERVICE_ALIAS.checker]
+command=/opt/rbenv/shims/bundle exec ruby checker.rb
+process_name=checker-%(process_num)s
+numprocs=2
+numprocs_start=0
+priority=300
+autostart=false
+autorestart=true
+startsecs=1
+startretries=3
+exitcodes=0,2
+stopsignal=INT
+stopwaitsecs=10
+stopasgroup=false
+killasgroup=false
+user=nobody
+redirect_stderr=false
+stdout_logfile=/path/to/checker/logs/checker-%(process_num)s-stdout.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=10
+stdout_capture_maxbytes=0
+stdout_events_enabled=false
+stderr_logfile=/path/to/checker/logs/checker-%(process_num)s-stderr.log
+stderr_logfile_maxbytes=10MB
+stderr_logfile_backups=10
+stderr_capture_maxbytes=0
+stderr_events_enabled=false
+environment=APP_INSTANCE="%(process_num)s",BEANSTALKD_URI="127.0.0.1:11300",LOG_LEVEL="DEBUG",STDOUT_SYNC="true",TUBE_LISTEN="themis.finals.service.SERVICE_ALIAS.listen",TUBE_REPORT="themis.finals.service.SERVICE_ALIAS.report"
+directory=/path/to/checker
+serverurl=AUTO
 
-## See also
-- [themis-finals](https://github.com/aspyatkin/themis-finals)
-- [themis-finals-guidelines](https://github.com/aspyatkin/themis-finals-guidelines)
-- [themis-finals-infrastructure](https://github.com/aspyatkin/themis-finals-infrastructure)
-- [themis-attack-protocol](https://github.com/aspyatkin/themis-attack-protocol)
-- [themis-attack-py](https://github.com/aspyatkin/themis-attack-py)
-- [themis-attack-result](https://github.com/aspyatkin/themis-attack-result)
-- [themis-checker-py](https://github.com/aspyatkin/themis-checker-py)
-- [themis-checker-result](https://github.com/aspyatkin/themis-checker-result)
+[group:themis.finals.service.SERVICE_ALIAS]
+programs=themis.finals.service.SERVICE_ALIAS.checker
+```
 
 ## License
 MIT @ [Alexander Pyatkin](https://github.com/aspyatkin)
