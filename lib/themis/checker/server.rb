@@ -5,6 +5,7 @@ require 'themis/checker/result'
 require 'base64'
 require 'date'
 require 'time_difference'
+require 'raven/base'
 
 
 module Themis
@@ -13,6 +14,21 @@ module Themis
             def initialize
                 @logger = self.get_logger
                 @beanstalk = nil
+
+                if self.raven_enabled?
+                    Raven.configure do |config|
+                        config.dsn = ENV['SENTRY_DSN']
+                        config.ssl_verification = false
+                        config.logger = @logger
+                        config.async = lambda { |event|
+                            Thread.new { Raven.send_event(event) }
+                        }
+                    end
+                end
+            end
+
+            def raven_enabled?
+                not ENV['SENTRY_DSN'].nil?
             end
 
             def run
@@ -45,7 +61,10 @@ module Themis
                             adjunct: Base64.encode64(updated_adjunct)
                         }
 
-                        @logger.info('PUSH flag `%s` /%d to `%s`@`%s` (%s) — status %s, adjunct `%s` [delivery %.2fs, processing %.2fs]' % [
+                        delivery_time = TimeDifference.between(timestamp_created, timestamp_delivered).in_seconds
+                        processing_time = TimeDifference.between(timestamp_delivered, timestamp_processed).in_seconds
+
+                        log_message = 'PUSH flag `%s` /%d to `%s`@`%s` (%s) - status %s, adjunct `%s` [delivery %.2fs, processing %.2fs]' % [
                             job_data['flag'],
                             metadata['round'],
                             metadata['service_name'],
@@ -53,9 +72,38 @@ module Themis
                             job_data['endpoint'],
                             Themis::Checker::Result.key(status),
                             job_result[:adjunct],
-                            TimeDifference.between(timestamp_created, timestamp_delivered).in_seconds,
-                            TimeDifference.between(timestamp_delivered, timestamp_processed).in_seconds
-                        ])
+                            delivery_time,
+                            processing_time
+                        ]
+
+                        if self.raven_enabled?
+                            short_log_message = 'PUSH `%s...` /%d to `%s` - status %s' % [
+                                job_data['flag'][0..7],
+                                metadata['round'],
+                                metadata['team_name'],
+                                Themis::Checker::Result.key(status)
+                            ]
+
+                            Raven.capture_message short_log_message, {
+                                level: 'info',
+                                tags: {
+                                    tf_operation: 'push',
+                                    tf_status: Themis::Checker::Result.key(status).to_s,
+                                    tf_team: metadata['team_name'],
+                                    tf_service: metadata['service_name'],
+                                    tf_round: metadata['round']
+                                },
+                                extra: {
+                                    endpoint: job_data['endpoint'],
+                                    flag: job_data['flag'],
+                                    adjunct: job_result[:adjunct],
+                                    delivery_time: delivery_time,
+                                    processing_time: processing_time
+                                }
+                            }
+                        end
+
+                        @logger.info log_message
                     when 'pull'
                         metadata = job_data['metadata']
                         timestamp_created = DateTime.iso8601 metadata['timestamp']
@@ -76,17 +124,57 @@ module Themis
                             status: status
                         }
 
-                        @logger.info('PULL flag `%s` /%d from `%s`@`%s` (%s) with adjunct `%s` — status %s [delivery %.2fs, processing %.2fs]' % [
-                            job_data['flag'],
-                            metadata['round'],
-                            metadata['service_name'],
-                            metadata['team_name'],
-                            job_data['endpoint'],
-                            job_data['adjunct'],
-                            Themis::Checker::Result.key(status),
-                            TimeDifference.between(timestamp_created, timestamp_delivered).in_seconds,
-                            TimeDifference.between(timestamp_delivered, timestamp_processed).in_seconds
-                        ])
+                        delivery_time = TimeDifference.between(timestamp_created, timestamp_delivered).in_seconds
+                        processing_time = TimeDifference.between(timestamp_delivered, timestamp_processed).in_seconds
+
+                        begin
+                            log_message = 'PULL flag `%s` /%d from `%s`@`%s` (%s) with adjunct `%s` - status %s [delivery %.2fs, processing %.2fs]' % [
+                                job_data['flag'],
+                                metadata['round'],
+                                metadata['service_name'],
+                                metadata['team_name'],
+                                job_data['endpoint'],
+                                job_data['adjunct'],
+                                Themis::Checker::Result.key(status),
+                                delivery_time,
+                                processing_time
+                            ]
+
+                            if self.raven_enabled?
+                                short_log_message = 'PULL `%s...` /%d from `%s` - status %s' % [
+                                    job_data['flag'][0..7],
+                                    metadata['round'],
+                                    metadata['team_name'],
+                                    Themis::Checker::Result.key(status)
+                                ]
+
+                                Raven.capture_message short_log_message, {
+                                    level: 'info',
+                                    tags: {
+                                        tf_operation: 'pull',
+                                        tf_status: Themis::Checker::Result.key(status).to_s,
+                                        tf_team: metadata['team_name'],
+                                        tf_service: metadata['service_name'],
+                                        tf_round: metadata['round']
+                                    },
+                                    extra: {
+                                        endpoint: job_data['endpoint'],
+                                        flag: job_data['flag'],
+                                        adjunct: job_data['adjunct'],
+                                        delivery_time: delivery_time,
+                                        processing_time: processing_time
+                                    }
+                                }
+                            end
+                        rescue Exception => e
+                            if self.raven_enabled?
+                                Raven.capture_exception e
+                            end
+                            @logger.error e.message
+                            e.backtrace.each { |line| @logger.error line }
+                        end
+
+                        @logger.info log_message
                     else
                         @logger.warn 'Unknown job!'
                     end
@@ -153,6 +241,9 @@ module Themis
                 rescue Interrupt
                     raise
                 rescue Exception => e
+                    if self.raven_enabled?
+                        Raven.capture_exception e
+                    end
                     @logger.error e.message
                     e.backtrace.each { |line| @logger.error line }
                 end
@@ -167,6 +258,9 @@ module Themis
                 rescue Interrupt
                     raise
                 rescue Exception => e
+                    if self.raven_enabled?
+                        Raven.capture_exception e
+                    end
                     @logger.error e.message
                     e.backtrace.each { |line| @logger.error line }
                 end

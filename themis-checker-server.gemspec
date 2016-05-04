@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
     s.name = 'themis-checker-server'
-    s.version = '2.0.0'
+    s.version = '3.0.0'
     s.date = '2016-04-29'
     s.summary = 'Themis::Checker::Server'
     s.description = 'Service checker base class for Themis contest checking system'
@@ -16,6 +16,7 @@ Gem::Specification.new do |s|
     s.add_dependency 'json'
     s.add_dependency 'themis-checker-result', '~> 1.1.0'
     s.add_dependency 'time_difference', '~> 0.4.2'
+    s.add_dependency 'sentry-raven', '~> 1.0.0'
 
     s.add_development_dependency 'bundler'
     s.add_development_dependency 'rake'
