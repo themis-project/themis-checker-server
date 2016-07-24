@@ -1,34 +1,34 @@
-# themis-checker-server
-[![Latest Version](https://img.shields.io/gem/v/themis-checker-server.svg?style=flat-square)](https://rubygems.org/gems/themis-checker-server)
-[![License](https://img.shields.io/github/license/aspyatkin/themis-checker-server.svg?style=flat-square)](https://github.com/aspyatkin/themis-checker-server/blob/master/LICENSE)
-[![Dependencies status](https://img.shields.io/gemnasium/aspyatkin/themis-checker-server.svg?style=flat-square)](https://gemnasium.com/aspyatkin/themis-checker-server)
-[![Code Climate](https://img.shields.io/codeclimate/github/aspyatkin/themis-checker-server.svg?style=flat-square)](https://codeclimate.com/github/aspyatkin/themis-checker-server)  
+# themis-finals-checker-server
+[![Latest Version](https://img.shields.io/gem/v/themis-finals-checker-server.svg?style=flat-square)](https://rubygems.org/gems/themis-finals-checker-server)
+[![License](https://img.shields.io/github/license/aspyatkin/themis-finals-checker-server.svg?style=flat-square)](https://github.com/aspyatkin/themis-finals-checker-server/blob/master/LICENSE)
+[![Dependencies status](https://img.shields.io/gemnasium/aspyatkin/themis-finals-checker-server.svg?style=flat-square)](https://gemnasium.com/aspyatkin/themis-finals-checker-server)
+[![Code Climate](https://img.shields.io/codeclimate/github/aspyatkin/themis-finals-checker-server.svg?style=flat-square)](https://codeclimate.com/github/aspyatkin/themis-finals-checker-server)  
 A Ruby gem to create service checker for [Themis Finals](https://github.com/aspyatkin/themis-finals) attack-defence CTF checking system.
 
 ## Installation
 ```sh
-gem install themis-checker-server
+gem install themis-finals-checker-server
 ```
-or just add `gem 'themis-checker-server'` to your Gemfile and run `bundle`.
+or just add `gem 'themis-finals-checker-server'` to your Gemfile and run `bundle`.
 
 ## Example
-A service checker should subclass `Themis::Checker::Server` and override two methods.
+A service checker should subclass `Themis::Finals::Checker::Server` and override two methods.
 
 Here's an example:
 
 ```ruby
-require 'themis/checker/server'
-require 'themis/checker/result'
+require 'themis/finals/checker/server'
+require 'themis/finals/checker/result'
 
-class SampleChecker < Themis::Checker::Server
+class SampleChecker < Themis::Finals::Checker::Server
     def push(endpoint, flag, adjunct, metadata)
         # business logic...
-        return Themis::Checker::Result::UP, adjunct
+        return Themis::Finals::Checker::Result::UP, adjunct
     end
 
     def pull(endpoint, flag, adjunct, metadata)
         # business logic...
-        Themis::Checker::Result::UP
+        Themis::Finals::Checker::Result::UP
     end
 end
 
@@ -37,7 +37,7 @@ checker.run
 ```
 
 ### Operation status
-See [themis-checker-result](https://github.com/aspyatkin/themis-checker-result).
+See [themis-finals-checker-result](https://github.com/aspyatkin/themis-finals-checker-result).
 
 ## Configuration
 Several environment variables should be specified to run service checker process:
